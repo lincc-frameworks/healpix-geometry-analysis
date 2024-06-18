@@ -24,7 +24,7 @@ def test_equatorial_region(order):
     k_c = 3 * nside / 4 * (2 / 3 - z_center + 8 * phi_center / (3 * jnp.pi))
     kp_c = nside + 3 * nside / 4 * (2 / 3 - z_center - 8 * phi_center / (3 * jnp.pi))
 
-    coords = HealpixCoordinates(nside)
+    coords = HealpixCoordinates.from_order(order)
     phi, z = coords.phi_z(k_c, kp_c)
 
     assert_allclose(phi, phi_center, atol=1e-3 / nside, rtol=1e-3 / nside)

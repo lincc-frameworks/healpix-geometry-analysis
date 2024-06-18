@@ -5,6 +5,8 @@ from typing import Self
 
 import jax.numpy as jnp
 
+from healpix_geometry_analysis.grid import HealpixGrid
+
 
 @dataclasses.dataclass
 class HealpixCoordinates:
@@ -16,13 +18,13 @@ class HealpixCoordinates:
         Healpix nside parameter, 2^order
     """
 
-    nside: int
-    """Healpix nside parameter, 2^order"""
+    grid: HealpixGrid
+    """Healpix grid object specifying order"""
 
     @classmethod
     def from_order(cls, order: int) -> Self:
         """Create HealpixCoordinates using healpix order (depth)"""
-        return cls(nside=1 << order)
+        return cls(HealpixGrid(order))
 
     def xyz(self, k, kp):
         """Cartesian coordinates on the unit sphere from diagonal indices
@@ -115,8 +117,8 @@ class HealpixCoordinates:
 
     def _eq(self, k, kp):
         """Cylidrical coordinates assuming the equatorial region"""
-        z = 2 / 3 * (2 - (kp + k) / self.nside)
-        phi = jnp.pi / 4 / self.nside * (self.nside - kp + k)
+        z = 2 / 3 * (2 - (kp + k) / self.grid.nside)
+        phi = jnp.pi / 4 / self.grid.nside * (self.grid.nside - kp + k)
         return phi, z
 
     def _polar(self, k, kp):
@@ -124,7 +126,7 @@ class HealpixCoordinates:
         j = jnp.abs(k) - 0.5
         i = jnp.abs(kp) + jnp.abs(k)
 
-        z = 1 - (i / self.nside) ** 2 / 3
+        z = 1 - (i / self.grid.nside) ** 2 / 3
         phi = 0.5 * jnp.pi * (j + 0.5) / i
         phi = jnp.where(kp >= 0, phi, jnp.pi - phi)
         phi = jnp.where(k >= 0, phi, -phi)
