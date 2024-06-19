@@ -21,6 +21,7 @@ dependencies = [
     "matplotlib",
     "numpy",
     "numpyro",
+    "optax",
 ]
 
 [project.urls]
