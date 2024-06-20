@@ -143,3 +143,44 @@ class HealpixCoordinates:
         x1, y1, z1 = self.xyz(k1, kp1)
         x2, y2, z2 = self.xyz(k2, kp2)
         return jnp.square(x1 - x2) + jnp.square(y1 - y2) + jnp.square(z1 - z2)
+
+    def diag_from_lonlat_degrees[T](self, lon: T, lat: T) -> tuple[T, T]:
+        """Diagonal indices from longitude and latitude in degrees
+
+        Parameters
+        ----------
+        lon : float
+            Longitude in degrees
+        lat : float
+            Latitude in degrees
+
+        Returns
+        -------
+        k : float
+            NW-SE diagonal index
+        kp : float
+            NE-SW diagonal index
+        """
+        phi, z = jnp.radians(lon), jnp.sin(jnp.radians(lat))
+
+        k_eq, kp_eq = self._diag_eq(phi, z)
+        k_pol, kp_pol = self._diag_pol(phi, z)
+
+        k = jnp.where(z <= 2 / 3, k_eq, k_pol)
+        kp = jnp.where(z <= 2 / 3, kp_eq, kp_pol)
+
+        return k, kp
+
+    def _diag_eq[T](self, phi: T, z: T) -> tuple[T, T]:
+        """Diagonal indices assuming the equatorial region"""
+        k = 3 * self.grid.nside / 4 * (2 / 3 - z + 8 * phi / (3 * jnp.pi))
+        kp = self.grid.nside + 3 * self.grid.nside / 4 * (2 / 3 - z - 8 * phi / (3 * jnp.pi))
+        return k, kp
+
+    def _diag_pol[T](self, phi: T, z: T) -> tuple[T, T]:
+        """Diagonal indices assuming the polar region"""
+        i = jnp.sqrt(3) * self.grid.nside * jnp.sqrt(1 - z)
+        j = 2 * i / jnp.pi * phi - 0.5
+        k = j + 0.5
+        kp = i - j - 0.5
+        return k, kp

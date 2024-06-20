@@ -25,6 +25,10 @@ def test_equatorial_region(order):
     kp_c = nside + 3 * nside / 4 * (2 / 3 - z_center - 8 * phi_center / (3 * jnp.pi))
 
     coords = HealpixCoordinates.from_order(order)
+    actual_k_c, actual_kp_c = coords.diag_from_lonlat_degrees(*lonlat_center)
+    assert_allclose(k_c, actual_k_c)
+    assert_allclose(kp_c, actual_kp_c)
+
     phi, z = coords.phi_z(k_c, kp_c)
 
     assert_allclose(phi, phi_center, atol=1e-3 / nside, rtol=1e-3 / nside)
@@ -59,6 +63,10 @@ def test_polar_region(order):
     kp_c = i_c - j_c - 0.5
 
     coords = HealpixCoordinates.from_order(order)
+    actual_k_c, actual_kp_c = coords.diag_from_lonlat_degrees(*lonlat_center)
+    assert_allclose(k_c, actual_k_c)
+    assert_allclose(kp_c, actual_kp_c)
+
     phi, z = coords.phi_z(k_c, kp_c)
 
     assert_allclose(phi, phi_center, atol=1e-3 / nside, rtol=1e-3 / nside)
