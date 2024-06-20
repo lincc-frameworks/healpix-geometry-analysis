@@ -5,7 +5,7 @@ from typing import Self
 
 import jax.numpy as jnp
 
-from healpix_geometry_analysis.grid import HealpixGrid
+from healpix_geometry_analysis.grid import HealpixGrid, HealpixGridPowerTwo
 
 
 @dataclasses.dataclass
@@ -24,7 +24,7 @@ class HealpixCoordinates:
     @classmethod
     def from_order(cls, order: int) -> Self:
         """Create HealpixCoordinates using healpix order (depth)"""
-        return cls(HealpixGrid(order))
+        return cls(HealpixGridPowerTwo(order=order))
 
     def xyz(self, k, kp):
         """Cartesian coordinates on the unit sphere from diagonal indices

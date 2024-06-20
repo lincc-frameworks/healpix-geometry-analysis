@@ -5,22 +5,17 @@ import math
 from functools import cached_property
 
 
-@dataclasses.dataclass(frozen=True)
+@dataclasses.dataclass(frozen=True, kw_only=True)
 class HealpixGrid:
     """Healpix grid properties"""
 
-    order: int
-    """Healpix order (depth) of the grid"""
-
-    @cached_property
-    def nside(self) -> int:
-        """Number of tiles on each side of the base Healpix grid tile"""
-        return 1 << self.order
+    nside: int
+    """Number of tiles on each side of the base Healpix grid tile"""
 
     @cached_property
     def ntiles(self) -> int:
         """Number of tiles"""
-        return 12 * (1 << (2 * self.order))
+        return 12 * self.nside**2
 
     @cached_property
     def tile_area_steradian(self) -> float:
@@ -46,3 +41,17 @@ class HealpixGrid:
     def average_pixel_size_arcsec(self) -> float:
         """Square root of the tile area in arcseconds"""
         return self.average_pixel_size_arcmin * 60
+
+
+class HealpixGridPowerTwo(HealpixGrid):
+    """Healpix grid with a notion of order, Nside = 2^order
+
+    Parameters
+    ----------
+    order : int
+        Healpix order (depth) of the grid
+    """
+
+    def __init__(self, *, order: int):
+        super().__init__(nside=1 << order)
+        self.order = order
