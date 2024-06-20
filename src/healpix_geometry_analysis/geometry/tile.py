@@ -3,21 +3,19 @@ from typing import Literal, Self
 
 import jax
 import jax.numpy as jnp
-import numpyro
 import numpyro.distributions as dist
-import optax
 
 from healpix_geometry_analysis.coordinates import HealpixCoordinates
 
 DIRECTIONS = ["p", "m"]
 DIRECTION_T = Literal[*DIRECTIONS]
 
-DISTANCE = ["chord_squared", "cos_arc"]
+DISTANCE = ["chord_squared", "minus_cos_arc"]
 DISTANCE_T = Literal[*DISTANCE]
 
 
 @dataclasses.dataclass(kw_only=True)
-class TileProblem:
+class TileGeometry:
     """Distance problem for two opposite edges of a Healpix tile
 
     Parameters
@@ -32,10 +30,10 @@ class TileProblem:
         direction of edges of the tile to compare:
         - "p" (plus) for NE and SW edges
         - "m" (minus) for NW and SE edges
-    distance : {"chord_squared", "cos_arc"}
+    distance : {"chord_squared", "minus_cos_arc"}
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
-        - "cos_arc" for cosine of the great circle arc distance
+        - "minus_cos_arc" for minus cosine of the great circle arc distance
     """
 
     delta: float = 0.5
@@ -54,7 +52,7 @@ class TileProblem:
     """direction of edges of the tile to compare, "p" (plus) or "m" (minus)"""
 
     distance: DISTANCE_T
-    """Distance function to use, "chord_squared" or "cos_arc\""""
+    """Distance function to use, "chord_squared" or "minus_cos_arc\""""
 
     def __post_init__(self):
         assert (
@@ -79,10 +77,10 @@ class TileProblem:
             direction of edges of the tile to compare:
             - "p" (plus) for NE and SW edges
             - "m" (minus) for NW and SE edges
-        distance : {"chord_squared", "cos_arc"}
+        distance : {"chord_squared", "minus_cos_arc"}
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
-            - "cos_arc" for cosine of the great circle arc distance
+            - "minus_cos_arc" for cosine of the great circle arc distance
 
         Returns
         -------
@@ -96,51 +94,6 @@ class TileProblem:
             direction=direction,
             distance=distance,
         )
-
-    def numpyro_side1(self):
-        """Get k & k' numpyro samples for the first side of the tile
-
-        It is NE for "p" direction and NW for "m" direction
-        """
-        return self._numpyro_side(1)
-
-    def numpyro_side2(self):
-        """Get k & k' numpyro samples for the second side of the tile
-
-        It is SW for "p" direction and SE for "m" direction
-        """
-        return self._numpyro_side(2)
-
-    def _numpyro_side(self, index: Literal[1, 2]) -> tuple[object, object]:
-        k_name = f"k{index}"
-        kp_name = f"kp{index}"
-        if self.direction == "p":
-            k = numpyro.sample(k_name, self.free_parameter_distributions[k_name])
-            kp = self.frozen_parameters[kp_name]
-        elif self.direction == "m":
-            k = self.frozen_parameters[k_name]
-            kp = numpyro.sample(kp_name, self.free_parameter_distributions[kp_name])
-        else:
-            raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
-        return k, kp
-
-    def numpyro_model(self):
-        """Numpyro model tp maximize"""
-        k1, kp1 = self.numpyro_side1()
-        k2, kp2 = self.numpyro_side2()
-
-        if self.distance == "chord_squared":
-            distance = self.coord.chord_squared(k1, kp1, k2, kp2)
-            # Use negative distance to minimize it
-            numpyro.factor("target", -distance)
-        elif self.distance == "cos_arc":
-            distance = self.coord.cos_arc(k1, kp1, k2, kp2)
-            # Use positive cosine to maximize it and minimize distance
-            numpyro.factor("target", distance)
-        else:
-            raise ValueError(f"Invalid distance: {self.distance}, must be one of {DISTANCE}")
-
-        numpyro.deterministic("distance", distance)
 
     parameter_names = ["k1", "k2", "kp1", "kp2"]
 
@@ -193,7 +146,7 @@ class TileProblem:
         """
         return {name: dist.Uniform(*limits) for name, limits in self.free_parameter_limits.items()}
 
-    def params(self, rng_key: jax.random.PRNGKey) -> dict[str, object]:
+    def initial_params(self, rng_key: jax.random.PRNGKey) -> dict[str, object]:
         """Initial parameter values
 
         Parameters
@@ -250,43 +203,42 @@ class TileProblem:
         """
         return {name: limits[1] for name, limits in self.limits.items()}
 
-    def freeze_optax_optimizer(self, optimizer):
-        """Freeze parameters of the optimizer"""
-        transforms = {"optimizer": optimizer, "frozen": optax.set_to_zero()}
-        param_labels = {frozen: "frozen" for frozen in self.frozen_parameters} | {
-            free: "optimizer" for free in self.free_parameter_limits
-        }
-        return optax.multi_transform(transforms, param_labels)
+    def calc_distance(self, k1, k2, kp1, kp2):
+        """Calculate distance between two points
 
-    def optix_side1(self, params):
-        """Get k & k' from the optimizer parameters for the first side of the tile"""
-        return self._optix_side(params, 1)
+        The distance measure is defined by the distance attribute.
+        It always grows with the Euclidean distance between the points.
 
-    def optix_side2(self, params):
-        """Get k & k' from the optimizer parameters for the second side of the tile"""
-        return self._optix_side(params, 2)
+        Parameters
+        ----------
+        k1 : float
+            NW-SE diagonal index of the first pixel
+        k2 : float
+            NW-SE diagonal index of the second pixel
+        kp1 : float
+            NE-SW diagonal index of the first pixel
+        kp2 : float
+            NE-SW diagonal index of the second pixel
 
-    def _optix_side(self, params, index: Literal[1, 2]) -> tuple[object, object]:
-        k_name = f"k{index}"
-        kp_name = f"kp{index}"
-        if self.direction == "p":
-            k = params[k_name]
-            kp = self.frozen_parameters[kp_name]
-        elif self.direction == "m":
-            k = self.frozen_parameters[k_name]
-            kp = params[kp_name]
-        else:
-            raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
-        return k, kp
-
-    def optix_loss(self, params):
-        """Loss function to minimize with optix"""
-        k1, kp1 = self.optix_side1(params)
-        k2, kp2 = self.optix_side2(params)
-
+        Returns
+        -------
+        float
+            Distance between the two pixels
+        """
         if self.distance == "chord_squared":
             return self.coord.chord_squared(k1, kp1, k2, kp2)
-        if self.distance == "cos_arc":
-            # Use negative cosine to maximize it and minimize distance
+        if self.distance == "minus_cos_arc":
             return -self.coord.cos_arc(k1, kp1, k2, kp2)
         raise ValueError(f"Invalid distance: {self.distance}, must be one of {DISTANCE}")
+
+    def arc_length_radians(self, value):
+        """Transform distance value returned by the model to radians"""
+        if self.distance == "chord_squared":
+            return 2.0 * jnp.arcsin(0.5 * jnp.sqrt(value))
+        if self.distance == "minus_cos_arc":
+            return jnp.arccos(value)
+        raise ValueError(f"Invalid distance: {self.distance}, must be one of {DISTANCE}")
+
+    def arc_length_degrees(self, value):
+        """Transform distance value returned by the model to degrees"""
+        return jnp.degrees(self.arc_length_radians(value))
