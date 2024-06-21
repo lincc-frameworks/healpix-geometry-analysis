@@ -140,13 +140,13 @@ class HealpixCoordinates:
         phi = jnp.where(k >= 0, phi, -phi)
         return phi, z
 
-    def cos_arc(self, k1, kp1, k2, kp2):
+    def cos_arc[T](self, k1: T, k2: T, kp1: T, kp2: T) -> T:
         """Cosine of the great circle arc between two pixels"""
         phi1, z1 = self.phi_z(k1, kp1)
         phi2, z2 = self.phi_z(k2, kp2)
         return z1 * z2 + jnp.sqrt(1 - z1**2) * jnp.sqrt(1 - z2**2) * jnp.cos(phi1 - phi2)
 
-    def chord_squared(self, k1, kp1, k2, kp2):
+    def chord_squared[T](self, k1: T, k2: T, kp1: T, kp2: T) -> T:
         """Square of chord distance between two pixels"""
         x1, y1, z1 = self.xyz(k1, kp1)
         x2, y2, z2 = self.xyz(k2, kp2)
