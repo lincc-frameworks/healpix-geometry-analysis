@@ -23,10 +23,6 @@ class BaseGeometry(ABC):
     ----------
     coord : HealpixCoordinates
         Healpix coordinates object
-    k_center : float
-        NW-SE diagonal index of the pixel center
-    kp_center : float
-        NE-SW diagonal index of the pixel center
     direction : {"p", "m"}
         direction of edges of the tile to compare:
         - "p" (plus) for NE and SW edges
@@ -40,12 +36,6 @@ class BaseGeometry(ABC):
     coord: HealpixCoordinates
     """Healpix coord object specifying order"""
 
-    k_center: float
-    """NW-SE diagonal indexx"""
-
-    kp_center: float
-    """NE-SW diagonal index"""
-
     direction: DIRECTION_T
     """direction of edges of the tile to compare, "p" (plus) or "m" (minus)"""
 
@@ -58,19 +48,13 @@ class BaseGeometry(ABC):
         ), f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}"
 
     @classmethod
-    def from_order(
-        cls, order: int, *, k_center: float, kp_center: float, direction: DIRECTION_T, distance: DISTANCE_T
-    ) -> Self:
+    def from_order(cls, order: int, *, direction: DIRECTION_T, distance: DISTANCE_T) -> Self:
         """Create TileProblem using order and diagonal indices
 
         Parameters
         ----------
         order : int
             Healpix order (depth) of the coord
-        k_center : float
-            NW-SE diagonal index of the pixel center
-        kp_center : float
-            NE-SW diagonal index of the pixel center
         direction : {"p", "m"}
             direction of edges of the tile to compare:
             - "p" (plus) for NE and SW edges
@@ -87,13 +71,41 @@ class BaseGeometry(ABC):
         """
         return cls(
             coord=HealpixCoordinates.from_order(order),
-            k_center=k_center,
-            kp_center=kp_center,
             direction=direction,
             distance=distance,
         )
 
-    parameter_names = ["k1", "k2", "kp1", "kp2"]
+    diagonal_names: tuple[str, str, str, str] = dataclasses.field(
+        init=False, default=("k1", "k2", "kp1", "kp2")
+    )
+
+    @abstractmethod
+    def diagonal_indices(self, params: dict[str, object]) -> tuple[object, object, object, object]:
+        """Diagonal indices of the pixels
+
+        Parameters
+        ----------
+        params : dict[str, object]
+            Pytree with parameter values
+
+        Returns
+        -------
+        tuple[object, object, object, object]
+            Diagonal indices of the pixel: k1, k2, kp1, kp2
+        """
+        raise NotImplementedError("To be implemented in subclasses")
+
+    @property
+    @abstractmethod
+    def parameter_names(self) -> tuple[str, ...]:
+        """Parameter names for the problem
+
+        Returns
+        -------
+        tuple[str]
+            Parameter names
+        """
+        raise NotImplementedError("To be implemented in subclasses")
 
     @property
     @abstractmethod
@@ -187,7 +199,7 @@ class BaseGeometry(ABC):
         """
         return {name: limits[1] for name, limits in self.limits.items()}
 
-    def calc_distance(self, k1, k2, kp1, kp2):
+    def calc_distance(self, params):
         """Calculate distance between two points
 
         The distance measure is defined by the distance attribute.
@@ -195,24 +207,19 @@ class BaseGeometry(ABC):
 
         Parameters
         ----------
-        k1 : float
-            NW-SE diagonal index of the first pixel
-        k2 : float
-            NW-SE diagonal index of the second pixel
-        kp1 : float
-            NE-SW diagonal index of the first pixel
-        kp2 : float
-            NE-SW diagonal index of the second pixel
+        params: dict[str, object]
+            Pytree with parameter values
 
         Returns
         -------
         float
             Distance between the two pixels
         """
+        k12_kp12 = self.diagonal_indices(params)
         if self.distance == "chord_squared":
-            return self.coord.chord_squared(k1, k2, kp1, kp2)
+            return self.coord.chord_squared(*k12_kp12)
         if self.distance == "minus_cos_arc":
-            return -self.coord.cos_arc(k1, k2, kp1, kp2)
+            return -self.coord.cos_arc(*k12_kp12)
         raise ValueError(f"Invalid distance: {self.distance}, must be one of {DISTANCE}")
 
     def arc_length_radians(self, value):
