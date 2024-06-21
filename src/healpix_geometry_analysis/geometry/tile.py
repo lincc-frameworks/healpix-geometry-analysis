@@ -126,10 +126,10 @@ class TileGeometry:
             and ("kp1" and "kp2") for "p" direction
         """
         if self.direction == "p":
-            limits = (self.k_center - self.delta, self.k_center + self.delta)
+            limits = (self.k_center - jnp.abs(self.delta), self.k_center + jnp.abs(self.delta))
             return dict.fromkeys(["k1", "k2"], limits)
         if self.direction == "m":
-            limits = (self.kp_center - self.delta, self.kp_center + self.delta)
+            limits = (self.kp_center - jnp.abs(self.delta), self.kp_center + jnp.abs(self.delta))
             return dict.fromkeys(["kp1", "kp2"], limits)
         raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
 

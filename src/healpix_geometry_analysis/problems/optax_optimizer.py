@@ -46,6 +46,6 @@ class OptaxOptimizerProblem(BaseProblem):
         }
         return optax.multi_transform(transforms, param_labels)
 
-    def optix_loss(self, params):
+    def loss(self, params):
         """Loss function to minimize with optax"""
         return self.geometry.calc_distance(*(params[name] for name in self.geometry.parameter_names))

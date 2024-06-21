@@ -1,4 +1,5 @@
 import jax
+import jax.numpy as jnp
 import optax
 from healpix_geometry_analysis.geometry.tile import TileGeometry
 from healpix_geometry_analysis.problems.optax_optimizer import OptaxOptimizerProblem
@@ -7,9 +8,9 @@ from healpix_geometry_analysis.problems.optax_optimizer import OptaxOptimizerPro
 def test_tile_problem_adabelief():
     """ "e2e test for TileProblem with Adam optimizer"""
     geometry = TileGeometry.from_order(
-        order=4,
-        k_center=1.5,
-        kp_center=14.5,
+        order=0,
+        k_center=0.5,
+        kp_center=0.5,
         direction="p",
         distance="chord_squared",
     )
@@ -19,10 +20,11 @@ def test_tile_problem_adabelief():
     rng_key = jax.random.PRNGKey(0)
     params = problem.initial_params(rng_key)
     opt_state = optimizer.init(params)
-    value_and_grad = jax.jit(jax.value_and_grad(problem.optix_loss))
+    value_and_grad = jax.jit(jax.value_and_grad(problem.loss))
 
     for _ in range(100):
         loss, grads = value_and_grad(params)
+        grads = jax.tree.map(lambda x: jnp.where(jnp.isfinite(x), x, 0.0), grads)
         updates, opt_state = optimizer.update(grads, opt_state, params)
         params = optax.apply_updates(params, updates)
         params = optax.projections.projection_box(

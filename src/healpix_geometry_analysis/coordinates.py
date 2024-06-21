@@ -26,6 +26,13 @@ class HealpixCoordinates:
         """Create HealpixCoordinates using healpix order (depth)"""
         return cls(HealpixGridPowerTwo(order=order))
 
+    @classmethod
+    def from_nside(cls, nside: int) -> Self:
+        """Create HealpixCoordinates using Nside parameter"""
+        if 2 ** (order := int(jnp.log2(nside))) == nside:
+            return cls.from_order(order)
+        return cls(HealpixGrid(nside=nside))
+
     def xyz(self, k, kp):
         """Cartesian coordinates on the unit sphere from diagonal indices
 
@@ -127,7 +134,8 @@ class HealpixCoordinates:
         i = jnp.abs(kp) + jnp.abs(k)
 
         z = 1 - (i / self.grid.nside) ** 2 / 3
-        phi = 0.5 * jnp.pi * (j + 0.5) / i
+        # Avoid division by zero when both k and kp are zero
+        phi = jnp.where(i > 0, 0.5 * jnp.pi * (j + 0.5) / i, 0.0)
         phi = jnp.where(kp >= 0, phi, jnp.pi - phi)
         phi = jnp.where(k >= 0, phi, -phi)
         return phi, z
@@ -144,25 +152,8 @@ class HealpixCoordinates:
         x2, y2, z2 = self.xyz(k2, kp2)
         return jnp.square(x1 - x2) + jnp.square(y1 - y2) + jnp.square(z1 - z2)
 
-    def diag_from_lonlat_degrees[T](self, lon: T, lat: T) -> tuple[T, T]:
-        """Diagonal indices from longitude and latitude in degrees
-
-        Parameters
-        ----------
-        lon : float
-            Longitude in degrees
-        lat : float
-            Latitude in degrees
-
-        Returns
-        -------
-        k : float
-            NW-SE diagonal index
-        kp : float
-            NE-SW diagonal index
-        """
-        phi, z = jnp.radians(lon), jnp.sin(jnp.radians(lat))
-
+    def diag_from_phi_z[T](self, phi: T, z: T) -> tuple[T, T]:
+        """Diagonal indices from cylindrical coordinates"""
         k_eq, kp_eq = self._diag_eq(phi, z)
         k_pol, kp_pol = self._diag_pol(phi, z)
 
@@ -184,3 +175,23 @@ class HealpixCoordinates:
         k = j + 0.5
         kp = i - j - 0.5
         return k, kp
+
+    def diag_from_lonlat_degrees[T](self, lon: T, lat: T) -> tuple[T, T]:
+        """Diagonal indices from longitude and latitude in degrees
+
+        Parameters
+        ----------
+        lon : float
+            Longitude in degrees
+        lat : float
+            Latitude in degrees
+
+        Returns
+        -------
+        k : float
+            NW-SE diagonal index
+        kp : float
+            NE-SW diagonal index
+        """
+        phi, z = jnp.radians(lon), jnp.sin(jnp.radians(lat))
+        return self.diag_from_phi_z(phi, z)

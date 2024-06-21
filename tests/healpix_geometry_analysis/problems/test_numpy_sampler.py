@@ -8,7 +8,7 @@ from numpyro.infer import MCMC, NUTS
 def test_tile_problem_nuts():
     """e2e test for TileProblem with MCMC sampler"""
     geometry = TileGeometry.from_order(
-        order=4,
+        order=5,
         k_center=1.5,
         kp_center=14.5,
         direction="p",
