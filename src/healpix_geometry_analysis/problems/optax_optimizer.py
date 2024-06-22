@@ -12,7 +12,7 @@ class OptaxOptimizerProblem(BaseProblem):
 
     Parameters
     ----------
-    geometry : TileGeometry
+    geometry : BaseGeometry
         Tile geometry object
     """
 
