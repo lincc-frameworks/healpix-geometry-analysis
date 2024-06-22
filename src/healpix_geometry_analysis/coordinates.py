@@ -158,6 +158,12 @@ class HealpixCoordinates:
         i_pol = jnp.sqrt(3.0) * self.grid.nside * jnp.sqrt(1 - z)
         return jnp.where(z <= 2 / 3, i_eq, i_pol)
 
+    def z_from_i[T](self, i: T) -> T:
+        """Sine-latitude from latitude index"""
+        z_eq = 4 / 3 - 2 * i / (3 * self.grid.nside)
+        z_pol = 1 - (i / self.grid.nside) ** 2 / 3
+        return jnp.where(i >= self.grid.nside, z_eq, z_pol)
+
     def diag_from_phi_z[T](self, phi: T, z: T) -> tuple[T, T]:
         """Diagonal indices from cylindrical coordinates"""
         k_eq, kp_eq = self._diag_eq(phi, z)

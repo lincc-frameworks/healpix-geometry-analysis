@@ -55,8 +55,9 @@ class MeridianGeometry(BaseGeometry):
             # From the equator up to the corner of the equatorial face
             self.z_center_limits = 0.0, 2 / 3 * (1 - (2 * self.delta) / self.coord.grid.nside)
         elif self.region == "polar":
-            # From the corner of the polar face to the pole tile
-            self.z_center_limits = 2 / 3, 1 - (2 * self.delta) ** 2 / (3 * self.coord.grid.nside**2)
+            # From the tile next to the corner of the polar face to the pole tile
+            i_limits = self.coord.grid.nside - 2 * self.delta, 2 * self.delta
+            self.z_center_limits = tuple(self.coord.z_from_i(i) for i in i_limits)
         else:
             raise ValueError(f"Invalid region: {self.region}, must be one of {REGION}")
 
