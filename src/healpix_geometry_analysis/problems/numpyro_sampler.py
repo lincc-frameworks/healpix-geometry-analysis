@@ -11,7 +11,7 @@ class NumpyroSamplerProblem(BaseProblem):
 
     Parameters
     ----------
-    geometry : TileGeometry
+    geometry : BaseGeometry
         Tile geometry object
     track_arc_length : bool, optional
         Track arc distance in degrees, by default False

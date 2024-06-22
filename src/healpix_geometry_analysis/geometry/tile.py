@@ -15,10 +15,6 @@ class TileGeometry(BaseGeometry):
     ----------
     coord : HealpixCoordinates
         Healpix coordinates object
-    k_center : float
-        NW-SE diagonal index of the pixel center
-    kp_center : float
-        NE-SW diagonal index of the pixel center
     direction : {"p", "m"}
         direction of edges of the tile to compare:
         - "p" (plus) for NE and SW edges
@@ -27,6 +23,10 @@ class TileGeometry(BaseGeometry):
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
         - "minus_cos_arc" for minus cosine of the great circle arc distance
+    k_center : float
+        NW-SE diagonal index of the pixel center
+    kp_center : float
+        NE-SW diagonal index of the pixel center
     """
 
     k_center: float
@@ -40,7 +40,13 @@ class TileGeometry(BaseGeometry):
 
     @classmethod
     def from_order(
-        cls, order: int, *, k_center: float, kp_center: float, direction: DIRECTION_T, distance: DISTANCE_T
+        cls,
+        order: int,
+        *,
+        direction: DIRECTION_T,
+        distance: DISTANCE_T,
+        k_center: float,
+        kp_center: float,
     ) -> Self:
         """Create TileProblem using order and diagonal indices
 
@@ -48,10 +54,6 @@ class TileGeometry(BaseGeometry):
         ----------
         order : int
             Healpix order (depth) of the coord
-        k_center : float
-            NW-SE diagonal index of the pixel center
-        kp_center : float
-            NE-SW diagonal index of the pixel center
         direction : {"p", "m"}
             direction of edges of the tile to compare:
             - "p" (plus) for NE and SW edges
@@ -60,6 +62,12 @@ class TileGeometry(BaseGeometry):
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
             - "minus_cos_arc" for minus cosine of the great circle arc distance
+        k_center : float
+            NW-SE diagonal index of the pixel center
+        kp_center : float
+            NE-SW diagonal index of the pixel center
+        delta : float
+            Offset in the diagonal index from the center to the pixel, default is 0.5
         """
         coord = HealpixCoordinates.from_order(order)
         return cls(

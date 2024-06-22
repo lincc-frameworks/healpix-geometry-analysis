@@ -14,6 +14,9 @@ DIRECTION_T = Literal[*DIRECTIONS]
 DISTANCE = ["chord_squared", "minus_cos_arc"]
 DISTANCE_T = Literal[*DISTANCE]
 
+REGION = ["equator", "polar"]
+REGION_T = Literal[*REGION]
+
 
 @dataclasses.dataclass(kw_only=True)
 class BaseGeometry(ABC):
@@ -93,7 +96,6 @@ class BaseGeometry(ABC):
         tuple[object, object, object, object]
             Diagonal indices of the pixel: k1, k2, kp1, kp2
         """
-        raise NotImplementedError("To be implemented in subclasses")
 
     @property
     @abstractmethod
