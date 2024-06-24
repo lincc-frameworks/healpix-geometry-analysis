@@ -20,6 +20,8 @@ dependencies = [
     "healpy",
     "matplotlib",
     "numpy",
+    "numpyro",
+    "optax",
 ]
 
 [project.urls]
