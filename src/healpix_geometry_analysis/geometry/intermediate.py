@@ -8,15 +8,13 @@ from healpix_geometry_analysis.geometry.base import (
     DIRECTION_T,
     DIRECTIONS,
     DISTANCE_T,
-    REGION,
-    REGION_T,
     BaseGeometry,
 )
 
 
 @dataclasses.dataclass(kw_only=True)
-class MeridianGeometry(BaseGeometry):
-    """Problem for two opposite edges of a floating tile along the meridian
+class IntermediateGeometry(BaseGeometry):
+    """Problem for two opposite edges of a floating tile between the regions
 
     Parameters
     ----------
@@ -30,15 +28,9 @@ class MeridianGeometry(BaseGeometry):
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
         - "minus_cos_arc" for minus cosine of the great circle arc distance
-    region : {"equator", "polar"}
-        Region of the floating tile:
-        - "equator" for equatorial region, z_center < 2/3
-        - "polar" for polar region, z_center >= 2/3
     delta : float, optional
         Offset in the diagonal index from the center to the pixel, default is 0.5
     """
-
-    region: REGION_T
 
     delta: float = 0.5
     """Offset in the diagonal index from the center to the pixel, typically 0.5"""
@@ -46,20 +38,10 @@ class MeridianGeometry(BaseGeometry):
     def __post_init__(self):
         super().__post_init__()
 
-        if self.region == "equator" and self.direction == "m":
-            raise ValueError(
-                "Equatorial region is symmetric over direction, use direction 'p' instead of 'm'"
-            )
+        self.z_center = 2 / 3
 
-        if self.region == "equator":
-            # From the equator up to the corner of the equatorial face
-            self.z_center_limits = 0.0, 2 / 3 * (1 - (2 * self.delta) / self.coord.grid.nside)
-        elif self.region == "polar":
-            # From the tile next to the corner of the polar face to the pole tile
-            i_limits = self.coord.grid.nside - 2 * self.delta, 2 * self.delta
-            self.z_center_limits = tuple(self.coord.z_from_i(i) for i in i_limits)
-        else:
-            raise ValueError(f"Invalid region: {self.region}, must be one of {REGION}")
+        min_delta_phi_from_meridian = 0.5 * self.delta * jnp.pi / self.coord.grid.nside
+        self.phi_center_limits = min_delta_phi_from_meridian, 0.5 * jnp.pi - min_delta_phi_from_meridian
 
     @classmethod
     def from_order(
@@ -68,7 +50,6 @@ class MeridianGeometry(BaseGeometry):
         *,
         direction: DIRECTION_T,
         distance: DISTANCE_T,
-        region: REGION_T,
     ) -> Self:
         """Create TileProblem using order and diagonal indices
 
@@ -84,17 +65,12 @@ class MeridianGeometry(BaseGeometry):
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
             - "minus_cos_arc" for minus cosine of the great circle arc distance
-        region : {"equator", "polar"}
-            Region of the floating tile:
-            - "equator" for equatorial region, z_center < 2/3
-            - "polar" for polar region, z_center >= 2/3
         """
         coord = HealpixCoordinates.from_order(order)
         return cls(
             coord=coord,
             direction=direction,
             distance=distance,
-            region=region,
         )
 
     def diagonal_indices(self, params: dict[str, object]) -> tuple[object, object, object, object]:
@@ -110,18 +86,7 @@ class MeridianGeometry(BaseGeometry):
         tuple[object, object, object, object]
             Diagonal indices of the pixel: k1, k2, kp1, kp2
         """
-
-        if self.region == "equator":
-            # For equatorial region we may use any phi
-            phi_center = 0.0
-        elif self.region == "polar":
-            # For polar region we use phi corresponding to j=delta=0.5
-            i_from_z = self.coord.i_from_z(params["z_center"])
-            phi_center = 0.5 * self.delta * jnp.pi / i_from_z
-        else:
-            raise ValueError(f"Invalid region: {self.region}, must be one of {REGION}")
-
-        k_center, kp_center = self.coord.diag_from_phi_z(phi_center, params["z_center"])
+        k_center, kp_center = self.coord.diag_from_phi_z(params["phi_center"], self.z_center)
         return (
             k_center + params["delta_k1"],
             k_center + params["delta_k2"],
@@ -130,7 +95,7 @@ class MeridianGeometry(BaseGeometry):
         )
 
     parameter_names: tuple[str, str, str, str, str] = dataclasses.field(
-        init=False, default=("z_center", "delta_k1", "delta_k2", "delta_kp1", "delta_kp2")
+        init=False, default=("phi_center", "delta_k1", "delta_k2", "delta_kp1", "delta_kp2")
     )
 
     @property
@@ -169,4 +134,4 @@ class MeridianGeometry(BaseGeometry):
             raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
         diag_limits = -jnp.abs(self.delta), jnp.abs(self.delta)
 
-        return {"z_center": self.z_center_limits} | dict.fromkeys(diag_names, diag_limits)
+        return {"phi_center": self.phi_center_limits} | dict.fromkeys(diag_names, diag_limits)
