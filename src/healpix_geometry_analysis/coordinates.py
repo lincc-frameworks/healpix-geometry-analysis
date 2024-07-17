@@ -211,3 +211,101 @@ class HealpixCoordinates:
         """
         phi, z = jnp.radians(lon), jnp.sin(jnp.radians(lat))
         return self.diag_from_phi_z(phi, z)
+
+    def unique_equatorial_tiles(self) -> tuple[jnp.ndarray, jnp.ndarray]:
+        """k and kp of centers of unique equatorial tiles
+
+        Returns a single tile per each Northern Hemisphere latitude ring.
+
+        Returns
+        -------
+        k : jnp.ndarray of float64
+            NW-SE diagonal indices
+        kp : jnp.ndarray of float64
+            NE-SW diagonal indices
+        """
+        # Step between equatorial rings
+        delta_z = 2 / 3 / self.grid.nside
+        # Step between meridian rings
+        delta_phi = 0.5 * jnp.pi / self.grid.nside
+
+        # First, with longitude = 0
+        z_meridian = jnp.arange((self.grid.nside + 1) % 2, self.grid.nside, 2) * delta_z
+        phi_meridian = jnp.zeros_like(z_meridian)
+        # Next, with a half-step over phi
+        z_offset = jnp.arange(self.grid.nside % 2, self.grid.nside, 2) * delta_z
+        phi_offset = jnp.full_like(z_offset, 0.5 * delta_phi)
+
+        z = jnp.concatenate([z_meridian, z_offset])
+        phi = jnp.concatenate([phi_meridian, phi_offset])
+
+        return self.diag_from_phi_z(phi, z)
+
+    def unique_intermediate_tiles(self) -> tuple[jnp.ndarray, jnp.ndarray]:
+        """k and kp of centers of unique intermediate tiles
+
+        Returns all the tiles from the latitude ring sector at z=2/3
+        and phi between 0 and pi/4.
+
+        Returns
+        -------
+        k : jnp.ndarray of float64
+            NW-SE diagonal indices
+        kp : jnp.ndarray of float64
+            NE-SW diagonal indices
+        """
+        delta_phi = 0.5 * jnp.pi / self.grid.nside
+
+        phi_inter = (0.5 + jnp.arange(0, (self.grid.nside + 1) // 2)) * delta_phi
+        z_inter = jnp.full_like(phi_inter, 2 / 3)
+
+        return self.diag_from_phi_z(phi_inter, z_inter)
+
+    def unique_polar_tiles(self) -> tuple[jnp.ndarray, jnp.ndarray]:
+        """k and kp of centers of unique polar tiles
+
+        Returns tiles from the first polar face (order = 0, nested idx = 0),
+        being in polar region and between zeroth and 45th meridians.
+        These tile centers have 0 < phi <= pi/4 and 2/3 < z < 1.
+
+        Returns
+        -------
+        k : jnp.ndarray of float64
+            NW-SE diagonal indices
+        kp : jnp.ndarray of float64
+            NE-SW diagonal indices
+        """
+        # Use "rectangular" indices to define the tiles
+
+        # First, create a matrix of all possible pairs: we will filter it later
+        i = jnp.arange(1, self.grid.nside)
+        j = jnp.arange(0, self.grid.nside)
+        i_all, j_all = jnp.meshgrid(i, j)
+
+        # Filter to have only j indices within a required "triangle"
+        j_idx = j_all <= (i_all - 1) // 2
+        i_pol_filtered, j_pol_filtered = i_all[j_idx], j_all[j_idx]
+
+        # Get k & k'
+        k = j_pol_filtered + 0.5
+        kp = i_pol_filtered - j_pol_filtered - 0.5
+
+        return k, kp
+
+    def unique_tiles(self) -> tuple[jnp.ndarray, jnp.ndarray]:
+        """k and kp of centers of all unique tiles
+
+        Returns all the unique tiles in the healpix grid.
+
+        Returns
+        -------
+        k : jnp.ndarray of float64
+            NW-SE diagonal indices
+        kp : jnp.ndarray of float64
+            NE-SW diagonal indices
+        """
+        k_eq, kp_eq = self.unique_equatorial_tiles()
+        k_inter, kp_inter = self.unique_intermediate_tiles()
+        k_pol, kp_pol = self.unique_polar_tiles()
+
+        return jnp.concatenate([k_eq, k_inter, k_pol]), jnp.concatenate([kp_eq, kp_inter, kp_pol])
