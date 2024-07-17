@@ -100,7 +100,7 @@ class TileGeometry(BaseGeometry):
         Returns
         -------
         tuple[str, str]
-            Freezed parameters.
+            Frozen parameters.
             ("k1" and "k2") for "m" direction
             and ("kp1" and "kp2") for "p" direction
         """

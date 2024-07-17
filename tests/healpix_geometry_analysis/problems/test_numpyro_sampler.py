@@ -1,8 +1,8 @@
 import jax
 import jax.numpy as jnp
 from healpix_geometry_analysis.coordinates import HealpixCoordinates
+from healpix_geometry_analysis.geometry.equatorial import EquatorialGeometry
 from healpix_geometry_analysis.geometry.intermediate import IntermediateGeometry
-from healpix_geometry_analysis.geometry.meridian import MeridianGeometry
 from healpix_geometry_analysis.geometry.tile import TileGeometry
 from healpix_geometry_analysis.problems.numpyro_sampler import NumpyroSamplerProblem
 from numpyro.infer import MCMC, NUTS
@@ -33,13 +33,11 @@ def test_tile_problem_nuts():
     ), f"min_distance samples: {jax.tree.map(lambda x: x[argmin], samples)}"
 
 
-def test_meridian_problem_nuts():
+def test_equatorial_problem_nuts():
     """e2e test for MeridianProblem with MCMC sampler"""
-    geometry = MeridianGeometry.from_order(
+    geometry = EquatorialGeometry.from_order(
         order=8,
-        direction="p",
         distance="chord_squared",
-        region="polar",
     )
     problem = NumpyroSamplerProblem(geometry, track_arc_length=True)
 
