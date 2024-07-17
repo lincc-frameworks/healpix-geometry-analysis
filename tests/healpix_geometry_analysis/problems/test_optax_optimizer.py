@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import optax
-from healpix_geometry_analysis.geometry.meridian import MeridianGeometry
+from healpix_geometry_analysis.geometry.equatorial import EquatorialGeometry
 from healpix_geometry_analysis.geometry.tile import TileGeometry
 from healpix_geometry_analysis.problems.optax_optimizer import OptaxOptimizerProblem
 
@@ -38,11 +38,9 @@ def test_tile_problem_adabelief():
 
 def test_meridian_problem_adamw():
     """e2e test for MeridianProblem with Adam optimizer with weight decay"""
-    geometry = MeridianGeometry.from_order(
+    geometry = EquatorialGeometry.from_order(
         order=8,
-        direction="p",
         distance="chord_squared",
-        region="polar",
     )
     problem = OptaxOptimizerProblem(geometry)
 

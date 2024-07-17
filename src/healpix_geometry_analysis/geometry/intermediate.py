@@ -22,8 +22,8 @@ class IntermediateGeometry(BaseGeometry):
         Healpix coordinates object
     direction : {"p", "m"}
         direction of edges of the tile to compare:
-        - "p" (plus) for NE and SW edges
-        - "m" (minus) for NW and SE edges
+        - "p" (plus) for NW and SE edges
+        - "m" (minus) for NE and SW edges
     distance : {"chord_squared", "minus_cos_arc"}
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
@@ -59,8 +59,8 @@ class IntermediateGeometry(BaseGeometry):
             Healpix order (depth) of the coord
         direction : {"p", "m"}
             direction of edges of the tile to compare:
-            - "p" (plus) for NE and SW edges
-            - "m" (minus) for NW and SE edges
+            - "p" (plus) for NW and SS edges
+            - "m" (minus) for NE and SW edges
         distance : {"chord_squared", "minus_cos_arc"}
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
@@ -106,13 +106,13 @@ class IntermediateGeometry(BaseGeometry):
         -------
         tuple[str, str]
             Frozen parameters.
-            ("k1" and "k2") for "m" direction
-            and ("kp1" and "kp2") for "p" direction
+            ("k1" and "k2") for "p" direction
+            and ("kp1" and "kp2") for "m" direction
         """
         if self.direction == "p":
-            return {"delta_kp1": -self.delta, "delta_kp2": self.delta}
-        if self.direction == "m":
             return {"delta_k1": -self.delta, "delta_k2": self.delta}
+        if self.direction == "m":
+            return {"delta_kp1": -self.delta, "delta_kp2": self.delta}
         raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
 
     @property
@@ -123,13 +123,13 @@ class IntermediateGeometry(BaseGeometry):
         -------
         dict[str, tuple[object, object]]
             Free parameters and their lower and upper limits.
-            ("k1" and "k2") for "m" direction
-            and ("kp1" and "kp2") for "p" direction
+            ("kp1" and "kp2") for "p" direction
+            and ("k1" and "k2") for "m" direction
         """
         if self.direction == "p":
-            diag_names = "delta_k1", "delta_k2"
-        elif self.direction == "m":
             diag_names = "delta_kp1", "delta_kp2"
+        elif self.direction == "m":
+            diag_names = "delta_k1", "delta_k2"
         else:
             raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
         diag_limits = -jnp.abs(self.delta), jnp.abs(self.delta)

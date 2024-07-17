@@ -28,8 +28,8 @@ class BaseGeometry(ABC):
         Healpix coordinates object
     direction : {"p", "m"}
         direction of edges of the tile to compare:
-        - "p" (plus) for NE and SW edges
-        - "m" (minus) for NW and SE edges
+        - "p" (plus) for NW and SE edges
+        - "m" (minus) for NE and SW edges
     distance : {"chord_squared", "minus_cos_arc"}
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
@@ -60,8 +60,8 @@ class BaseGeometry(ABC):
             Healpix order (depth) of the coord
         direction : {"p", "m"}
             direction of edges of the tile to compare:
-            - "p" (plus) for NE and SW edges
-            - "m" (minus) for NW and SE edges
+            - "p" (plus) for NW and SE edges
+            - "m" (minus) for NE and SW edges
         distance : {"chord_squared", "minus_cos_arc"}
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
