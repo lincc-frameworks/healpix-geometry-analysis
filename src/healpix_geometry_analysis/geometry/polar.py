@@ -1,20 +1,24 @@
 import dataclasses
-from typing import Self
 
 import jax.numpy as jnp
 
-from healpix_geometry_analysis.coordinates import HealpixCoordinates
 from healpix_geometry_analysis.geometry.base import (
-    DIRECTION_T,
     DIRECTIONS,
-    DISTANCE_T,
     BaseGeometry,
 )
 
 
 @dataclasses.dataclass(kw_only=True)
-class IntermediateGeometry(BaseGeometry):
-    """Problem for two opposite edges of a floating tile between the regions
+class PolarGeometry(BaseGeometry):
+    """Problem for two opposite edges of a floating tile in the polar region.
+
+    The position of the center of the tile is parameterized with
+    vertical index i and relative diagonal coordinate k_to_k_range
+    (we use it as a horizontal coordinate). This relative
+    index takes values from 0 to 1, where 0 corresponds to the leftmost
+    tile, k=0.5 (adjacent to the zero meridian), and 1 to the rightmost tile,
+    k=0.5*i, which corresponds to phi = pi/4, and located in the center
+    of the "face" (order 0) tile.
 
     Parameters
     ----------
@@ -38,55 +42,27 @@ class IntermediateGeometry(BaseGeometry):
     def __post_init__(self):
         super().__post_init__()
 
-        self.z_center = 2 / 3
+        self.i_center_limits = (2.0 * self.delta, self.coord.grid.nside - 2.0 * self.delta)
+        self.k_to_k_range_center_limits = (0.0, 1.0)
 
-        min_delta_phi_from_meridian = 0.5 * self.delta * jnp.pi / self.coord.grid.nside
-        self.phi_center_limits = min_delta_phi_from_meridian, 0.5 * jnp.pi - min_delta_phi_from_meridian
-
-    @classmethod
-    def from_order(
-        cls,
-        order: int,
-        *,
-        direction: DIRECTION_T,
-        distance: DISTANCE_T,
-    ) -> Self:
-        """Create TileProblem using order and diagonal indices
-
-        Parameters
-        ----------
-        order : int
-            Healpix order (depth) of the coord
-        direction : {"p", "m"}
-            direction of edges of the tile to compare:
-            - "p" (plus) for NW and SS edges
-            - "m" (minus) for NE and SW edges
-        distance : {"chord_squared", "minus_cos_arc"}
-            Distance function to use:
-            - "chord_squared" for squared chord distance in the unit sphere
-            - "minus_cos_arc" for minus cosine of the great circle arc distance
-        """
-        coord = HealpixCoordinates.from_order(order)
-        return cls(
-            coord=coord,
-            direction=direction,
-            distance=distance,
-        )
-
-    def diagonal_indices(self, params: dict[str, object]) -> tuple[object, object, object, object]:
+    def diagonal_indices[T](self, params: dict[str, T]) -> tuple[T, T, T, T]:
         """Diagonal indices of the pixels
 
         Parameters
         ----------
-        params : dict[str, object]
+        params : dict[str, T]
             Pytree with parameter values
 
         Returns
         -------
-        tuple[object, object, object, object]
+        tuple[T, T, T, T]
             Diagonal indices of the pixel: k1, k2, kp1, kp2
         """
-        k_center, kp_center = self.coord.diag_from_phi_z(params["phi_center"], self.z_center)
+        i_center = params["i_center"]
+        k_range_length = 0.5 * i_center - self.delta
+        k_center = params["k_to_k_range_center"] * k_range_length + self.delta
+        kp_center = self.coord.kp_from_k_i(k_center, i_center)
+
         return (
             k_center + params["delta_k1"],
             k_center + params["delta_k2"],
@@ -95,7 +71,8 @@ class IntermediateGeometry(BaseGeometry):
         )
 
     parameter_names: tuple[str, str, str, str, str] = dataclasses.field(
-        init=False, default=("phi_center", "delta_k1", "delta_k2", "delta_kp1", "delta_kp2")
+        init=False,
+        default=("i_center", "k_to_k_range_center", "delta_k1", "delta_k2", "delta_kp1", "delta_kp2"),
     )
 
     @property
@@ -123,7 +100,7 @@ class IntermediateGeometry(BaseGeometry):
         -------
         dict[str, tuple[object, object]]
             Free parameters and their lower and upper limits.
-            "phi_center" and ("kp1" and "kp2") for "p" direction
+            "i_center", "k_to_k_range_center" and ("kp1" and "kp2") for "p" direction
             or ("k1" and "k2") for "m" direction
         """
         if self.direction == "p":
@@ -134,4 +111,7 @@ class IntermediateGeometry(BaseGeometry):
             raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
         diag_limits = -jnp.abs(self.delta), jnp.abs(self.delta)
 
-        return {"phi_center": self.phi_center_limits} | dict.fromkeys(diag_names, diag_limits)
+        return {
+            "i_center": self.i_center_limits,
+            "k_to_k_range_center": self.k_to_k_range_center_limits,
+        } | dict.fromkeys(diag_names, diag_limits)

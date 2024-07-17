@@ -174,6 +174,10 @@ class HealpixCoordinates:
 
         return k, kp
 
+    def kp_from_k_i[T](self, k: T, i: T) -> T:
+        """NE-SW diagonal index from NW-SE diagonal index and latitude index"""
+        return i - k
+
     def _diag_eq[T](self, phi: T, z: T) -> tuple[T, T]:
         """Diagonal indices assuming the equatorial region"""
         k = 3 * self.grid.nside / 4 * (2 / 3 - z + 8 * phi / (3 * jnp.pi))
