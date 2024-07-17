@@ -29,8 +29,8 @@ class EquatorialGeometry(BaseGeometry):
         Offset in the diagonal index from the center to the pixel, default is 0.5
     """
 
-    direction: DIRECTION_T = dataclasses.field(default="m", init=False)
-    """Direction of edges of the tile to compare, "m" (minus) for NW and SE edges"""
+    direction: DIRECTION_T = dataclasses.field(default="p", init=False)
+    """Direction of edges of the tile to compare, "p" (plus) for NW and SE edges"""
 
     delta: float = 0.5
     """Offset in the diagonal index from the center to the pixel, typically 0.5"""
@@ -97,8 +97,8 @@ class EquatorialGeometry(BaseGeometry):
             Frozen parameters.
             ("k1" and "k2")
         """
-        if self.direction != "m":
-            raise ValueError(f'Invalid direction: {self.direction}, must be "m"')
+        if self.direction != "p":
+            raise ValueError(f'Invalid direction: {self.direction}, must be "p"')
         k1 = 0.5 * self.coord.grid.nside
         return {"k1": k1, "k2": k1 + 2.0 * self.delta}
 
@@ -113,8 +113,8 @@ class EquatorialGeometry(BaseGeometry):
             ("k1" and "k2") for "m" direction
             and ("kp1" and "kp2") for "p" direction
         """
-        if self.direction != "m":
-            raise ValueError(f'Invalid direction: {self.direction}, must be one of "m"')
+        if self.direction != "p":
+            raise ValueError(f'Invalid direction: {self.direction}, must be one of "p"')
         return {
             "kp1": (0.5 * self.coord.grid.nside, self.coord.grid.nside * 1.5),
             "kp2_minus_kp1": (-2.0 * self.delta, 2.0 * self.delta),

@@ -17,8 +17,8 @@ class TileGeometry(BaseGeometry):
         Healpix coordinates object
     direction : {"p", "m"}
         direction of edges of the tile to compare:
-        - "p" (plus) for NE and SW edges
-        - "m" (minus) for NW and SE edges
+        - "p" (plus) for NW and SE edges
+        - "m" (minus) for NE and SW edges
     distance : {"chord_squared", "minus_cos_arc"}
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
@@ -56,8 +56,8 @@ class TileGeometry(BaseGeometry):
             Healpix order (depth) of the coord
         direction : {"p", "m"}
             direction of edges of the tile to compare:
-            - "p" (plus) for NE and SW edges
-            - "m" (minus) for NW and SE edges
+            - "p" (plus) for NW and SE edges
+            - "m" (minus) for NE and SW edges
         distance : {"chord_squared", "minus_cos_arc"}
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
@@ -101,13 +101,13 @@ class TileGeometry(BaseGeometry):
         -------
         tuple[str, str]
             Frozen parameters.
-            ("k1" and "k2") for "m" direction
-            and ("kp1" and "kp2") for "p" direction
+            ("k1" and "k2") for "p" direction
+            and ("kp1" and "kp2") for "m" direction
         """
         if self.direction == "p":
-            return {"kp1": self.kp_center - self.delta, "kp2": self.kp_center + self.delta}
-        if self.direction == "m":
             return {"k1": self.k_center - self.delta, "k2": self.k_center + self.delta}
+        if self.direction == "m":
+            return {"kp1": self.kp_center - self.delta, "kp2": self.kp_center + self.delta}
         raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
 
     @property
@@ -118,13 +118,13 @@ class TileGeometry(BaseGeometry):
         -------
         dict[str, tuple[object, object]]
             Free parameters and their lower and upper limits.
-            ("k1" and "k2") for "m" direction
-            and ("kp1" and "kp2") for "p" direction
+            ("kp1" and "kp2") for "p" direction
+            and ("k1" and "k2") for "m" direction
         """
         if self.direction == "p":
-            limits = (self.k_center - jnp.abs(self.delta), self.k_center + jnp.abs(self.delta))
-            return dict.fromkeys(["k1", "k2"], limits)
-        if self.direction == "m":
             limits = (self.kp_center - jnp.abs(self.delta), self.kp_center + jnp.abs(self.delta))
             return dict.fromkeys(["kp1", "kp2"], limits)
+        if self.direction == "m":
+            limits = (self.k_center - jnp.abs(self.delta), self.k_center + jnp.abs(self.delta))
+            return dict.fromkeys(["k1", "k2"], limits)
         raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")

@@ -14,7 +14,7 @@ def test_tile_problem_nuts():
         order=5,
         k_center=1.5,
         kp_center=14.5,
-        direction="p",
+        direction="m",
         distance="chord_squared",
     )
     problem = NumpyroSamplerProblem(geometry, track_arc_length=True)
