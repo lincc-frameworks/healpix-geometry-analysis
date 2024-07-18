@@ -80,11 +80,11 @@ class EquatorialGeometry(BaseGeometry):
             params["k1"],
             params["k2"],
             params["kp1"],
-            params["kp2_minus_kp1"] + params["kp1"],
+            params["kp2"],
         )
 
     parameter_names: tuple[str, str, str, str, str] = dataclasses.field(
-        init=False, default=("k1", "k2", "kp1", "kp2_minus_kp1")
+        init=False, default=("k1", "k2", "kp1", "kp2")
     )
 
     @property
@@ -115,7 +115,5 @@ class EquatorialGeometry(BaseGeometry):
         """
         if self.direction != "p":
             raise ValueError(f'Invalid direction: {self.direction}, must be one of "p"')
-        return {
-            "kp1": (0.5 * self.coord.grid.nside, self.coord.grid.nside * 1.5),
-            "kp2_minus_kp1": (-2.0 * self.delta, 2.0 * self.delta),
-        }
+        kp_range = (0.5 * self.coord.grid.nside, self.coord.grid.nside * 1.5)
+        return dict.fromkeys(["kp1", "kp2"], kp_range)

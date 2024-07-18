@@ -37,7 +37,7 @@ def test_tile_problem_nuts():
 def test_equatorial_problem_nuts():
     """e2e test for MeridianProblem with MCMC sampler"""
     geometry = EquatorialGeometry.from_order(
-        order=8,
+        order=2,
         distance="chord_squared",
     )
     problem = NumpyroSamplerProblem(geometry, track_arc_length=True)

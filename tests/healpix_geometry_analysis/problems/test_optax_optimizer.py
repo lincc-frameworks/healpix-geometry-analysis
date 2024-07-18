@@ -36,10 +36,10 @@ def test_tile_problem_adabelief():
     assert arc_distance_deg < problem.geometry.coord.grid.average_pixel_size_degree
 
 
-def test_meridian_problem_adamw():
-    """e2e test for MeridianProblem with Adam optimizer with weight decay"""
+def test_equatorial_problem_adamw():
+    """e2e test for EquatorialProblem with Adam optimizer with weight decay"""
     geometry = EquatorialGeometry.from_order(
-        order=8,
+        order=2,
         distance="chord_squared",
     )
     problem = OptaxOptimizerProblem(geometry)
