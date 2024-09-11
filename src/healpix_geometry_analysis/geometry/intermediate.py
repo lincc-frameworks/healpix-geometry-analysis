@@ -41,7 +41,7 @@ class IntermediateGeometry(BaseGeometry):
         self.z_center = 2 / 3
 
         min_delta_phi_from_meridian = 0.5 * self.delta * jnp.pi / self.coord.grid.nside
-        self.phi_center_limits = min_delta_phi_from_meridian, 0.5 * jnp.pi - min_delta_phi_from_meridian
+        self.phi_center_limits = min_delta_phi_from_meridian, 0.25 * jnp.pi - min_delta_phi_from_meridian
 
     @classmethod
     def from_order(

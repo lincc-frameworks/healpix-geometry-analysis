@@ -84,8 +84,8 @@ def test_intermediate_problem_nuts():
 
         min_samples[direction] = min_sample
 
-    assert jnp.allclose(
-        min_samples["p"]["arc_length_degree"], min_samples["m"]["arc_length_degree"], rtol=1e-1
+    assert (
+        min_samples["p"]["arc_length_degree"] > min_samples["m"]["arc_length_degree"]
     ), f"min_samples: {min_samples}"
 
 
