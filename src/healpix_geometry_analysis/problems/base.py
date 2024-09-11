@@ -1,6 +1,6 @@
 import dataclasses
 
-from healpix_geometry_analysis.geometry.tile import TileGeometry
+from healpix_geometry_analysis.geometry.base import BaseGeometry
 
 
 @dataclasses.dataclass
@@ -9,9 +9,9 @@ class BaseProblem:
 
     Parameters
     ----------
-    geometry : TileGeometry
-        Tile geometry object
+    geometry : BaseGeometry
+        Geometry object
     """
 
-    geometry: TileGeometry
+    geometry: BaseGeometry
     """Geometry object describing k1, k2, kp1 & kp2 for the problem"""

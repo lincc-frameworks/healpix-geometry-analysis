@@ -11,4 +11,5 @@ Welcome to healpix_geometry_analysis's documentation!
    Home page <self>
    Boundaries <notebooks/boundaries>
    Single tile minimum size problem: one by one <notebooks/tile_min_size_1by1>
+   Floating tile minimum size problem: one by one vs scan <notebooks/tile_min_size_floating>
    API Reference <autoapi/index>

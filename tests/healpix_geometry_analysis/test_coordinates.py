@@ -77,3 +77,66 @@ def test_polar_region(order):
 
     xyz = coords.xyz(k_c, kp_c)
     assert_allclose(xyz, xyz_center.T, atol=1e-3 / nside, rtol=1e-3 / nside)
+
+
+@pytest.mark.parametrize("nside", [1, 2, 3, 4, 8, 16, 17, 32, 128])
+def test_unique_equatorial_tiles(nside):
+    """Check if the unique equatorial tiles are computed correctly"""
+    coords = HealpixCoordinates.from_nside(nside)
+    k, kp = coords.unique_equatorial_tiles()
+
+    assert k.shape == kp.shape
+    assert k.shape == (nside,)
+
+    phi, z = coords.phi_z(k, kp)
+    assert jnp.sum(jnp.abs(phi) < 1e-8) == (nside + 1) // 2
+    assert jnp.sum(jnp.abs(phi) > 1e-8) == nside // 2
+    assert jnp.all(z < 2 / 3)
+    assert jnp.all(z >= 0)
+
+
+@pytest.mark.parametrize("nside", [1, 2, 3, 4, 7, 8, 16, 32, 77, 128])
+def test_unique_intermediate_tiles(nside):
+    """Check if the unique intermediate tiles are computed correctly"""
+    coords = HealpixCoordinates.from_nside(nside)
+    k, kp = coords.unique_intermediate_tiles()
+
+    assert k.shape == kp.shape
+    assert k.shape == ((nside + 1) // 2,)
+
+    phi, z = coords.phi_z(k, kp)
+    assert jnp.allclose(z, 2 / 3)
+    assert jnp.all(phi >= 0)
+    assert jnp.sum(phi > jnp.pi / 4 - 1e-6) == nside % 2
+
+
+@pytest.mark.parametrize("nside", [1, 2, 3, 7])
+def test_unique_polar_tiles(nside):
+    """Check if the unique polar tiles are computed correctly"""
+    coords = HealpixCoordinates.from_nside(nside)
+    k, kp = coords.unique_polar_tiles()
+
+    assert k.shape == kp.shape
+    assert k.size == (nside + 1) // 2 * (nside // 2)
+
+    phi, z = coords.phi_z(k, kp)
+    assert jnp.all(z > 2 / 3)
+    assert jnp.all(z < 1)
+    assert jnp.all(phi > 0)
+    assert jnp.sum(phi > jnp.pi / 4 - 1e-6) == nside // 2
+
+
+@pytest.mark.parametrize("nside", [1, 2, 7, 8])
+def test_unique_tiles(nside):
+    """Check if the unique tiles are computed correctly"""
+    coords = HealpixCoordinates.from_nside(nside)
+    k, kp = coords.unique_tiles()
+
+    assert k.shape == kp.shape
+    assert k.size == nside + (nside + 1) // 2 + (nside + 1) // 2 * (nside // 2)
+
+    phi, z = coords.phi_z(k, kp)
+    assert jnp.all(z >= 0)
+    assert jnp.all(z < 1)
+    assert jnp.all(phi >= -1e-8)
+    assert jnp.all(phi <= jnp.pi / 4 + 1e-8)

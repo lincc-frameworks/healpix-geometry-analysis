@@ -4,12 +4,17 @@ from typing import Self
 import jax.numpy as jnp
 
 from healpix_geometry_analysis.coordinates import HealpixCoordinates
-from healpix_geometry_analysis.geometry.base import DIRECTION_T, DIRECTIONS, DISTANCE_T, BaseGeometry
+from healpix_geometry_analysis.geometry.base import (
+    DIRECTION_T,
+    DIRECTIONS,
+    DISTANCE_T,
+    BaseGeometry,
+)
 
 
 @dataclasses.dataclass(kw_only=True)
-class TileGeometry(BaseGeometry):
-    """Distance problem for two opposite edges of a Healpix tile
+class IntermediateGeometry(BaseGeometry):
+    """Problem for two opposite edges of a floating tile between the regions
 
     Parameters
     ----------
@@ -23,20 +28,20 @@ class TileGeometry(BaseGeometry):
         Distance function to use:
         - "chord_squared" for squared chord distance in the unit sphere
         - "minus_cos_arc" for minus cosine of the great circle arc distance
-    k_center : float
-        NW-SE diagonal index of the pixel center
-    kp_center : float
-        NE-SW diagonal index of the pixel center
+    delta : float, optional
+        Offset in the diagonal index from the center to the pixel, default is 0.5
     """
-
-    k_center: float
-    """NW-SE diagonal index of the pixel center"""
-
-    kp_center: float
-    """NE-SW diagonal index of the pixel center"""
 
     delta: float = 0.5
     """Offset in the diagonal index from the center to the pixel, typically 0.5"""
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        self.z_center = 2 / 3
+
+        min_delta_phi_from_meridian = 0.5 * self.delta * jnp.pi / self.coord.grid.nside
+        self.phi_center_limits = min_delta_phi_from_meridian, 0.25 * jnp.pi - min_delta_phi_from_meridian
 
     @classmethod
     def from_order(
@@ -45,8 +50,6 @@ class TileGeometry(BaseGeometry):
         *,
         direction: DIRECTION_T,
         distance: DISTANCE_T,
-        k_center: float,
-        kp_center: float,
     ) -> Self:
         """Create TileProblem using order and diagonal indices
 
@@ -56,22 +59,18 @@ class TileGeometry(BaseGeometry):
             Healpix order (depth) of the coord
         direction : {"p", "m"}
             direction of edges of the tile to compare:
-            - "p" (plus) for NW and SE edges
+            - "p" (plus) for NW and SS edges
             - "m" (minus) for NE and SW edges
         distance : {"chord_squared", "minus_cos_arc"}
             Distance function to use:
             - "chord_squared" for squared chord distance in the unit sphere
             - "minus_cos_arc" for minus cosine of the great circle arc distance
-        k_center : float
-            NW-SE diagonal index of the pixel center
-        kp_center : float
-            NE-SW diagonal index of the pixel center
-        delta : float
-            Offset in the diagonal index from the center to the pixel, default is 0.5
         """
         coord = HealpixCoordinates.from_order(order)
         return cls(
-            coord=coord, k_center=k_center, kp_center=kp_center, direction=direction, distance=distance
+            coord=coord,
+            direction=direction,
+            distance=distance,
         )
 
     def diagonal_indices(self, params: dict[str, object]) -> tuple[object, object, object, object]:
@@ -87,10 +86,16 @@ class TileGeometry(BaseGeometry):
         tuple[object, object, object, object]
             Diagonal indices of the pixel: k1, k2, kp1, kp2
         """
-        return params["k1"], params["k2"], params["kp1"], params["kp2"]
+        k_center, kp_center = self.coord.diag_from_phi_z(params["phi_center"], self.z_center)
+        return (
+            k_center + params["delta_k1"],
+            k_center + params["delta_k2"],
+            kp_center + params["delta_kp1"],
+            kp_center + params["delta_kp2"],
+        )
 
-    parameter_names: tuple[str, str, str, str] = dataclasses.field(
-        init=False, default=("k1", "k2", "kp1", "kp2")
+    parameter_names: tuple[str, str, str, str, str] = dataclasses.field(
+        init=False, default=("phi_center", "delta_k1", "delta_k2", "delta_kp1", "delta_kp2")
     )
 
     @property
@@ -101,13 +106,13 @@ class TileGeometry(BaseGeometry):
         -------
         tuple[str, str]
             Frozen parameters.
-            ("k1" and "k2") for "p" direction
-            and ("kp1" and "kp2") for "m" direction
+            ("delta_k1" and "delta_k2") for "p" direction
+            and ("delta_kp1" and "delta_kp2") for "m" direction
         """
         if self.direction == "p":
-            return {"k1": self.k_center - self.delta, "k2": self.k_center + self.delta}
+            return {"delta_k1": -self.delta, "delta_k2": self.delta}
         if self.direction == "m":
-            return {"kp1": self.kp_center - self.delta, "kp2": self.kp_center + self.delta}
+            return {"delta_kp1": -self.delta, "delta_kp2": self.delta}
         raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
 
     @property
@@ -118,13 +123,15 @@ class TileGeometry(BaseGeometry):
         -------
         dict[str, tuple[object, object]]
             Free parameters and their lower and upper limits.
-            ("kp1" and "kp2") for "p" direction
-            and ("k1" and "k2") for "m" direction
+            "phi_center" and ("kp1" and "kp2") for "p" direction
+            or ("k1" and "k2") for "m" direction
         """
         if self.direction == "p":
-            limits = (self.kp_center - jnp.abs(self.delta), self.kp_center + jnp.abs(self.delta))
-            return dict.fromkeys(["kp1", "kp2"], limits)
-        if self.direction == "m":
-            limits = (self.k_center - jnp.abs(self.delta), self.k_center + jnp.abs(self.delta))
-            return dict.fromkeys(["k1", "k2"], limits)
-        raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
+            diag_names = "delta_kp1", "delta_kp2"
+        elif self.direction == "m":
+            diag_names = "delta_k1", "delta_k2"
+        else:
+            raise ValueError(f"Invalid direction: {self.direction}, must be one of {DIRECTIONS}")
+        diag_limits = -jnp.abs(self.delta), jnp.abs(self.delta)
+
+        return {"phi_center": self.phi_center_limits} | dict.fromkeys(diag_names, diag_limits)
