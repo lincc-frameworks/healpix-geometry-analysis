@@ -7,11 +7,10 @@
 [![Codecov](https://codecov.io/gh/lincc-frameworks/healpix-geometry-analysis/branch/main/graph/badge.svg)](https://codecov.io/gh/lincc-frameworks/healpix-geometry-analysis)
 [![Read The Docs](https://img.shields.io/readthedocs/healpix-geometry-analysis)](https://healpix-geometry-analysis.readthedocs.io/)
 
+This project was developed for the LINCC-Frameworks projects [HATS](https://github.com/astronomy-commons/hats) and [LSDB](https://github.com/astronomy-commons/lsdb).
+
 This project was automatically generated using the LINCC-Frameworks 
 [python-project-template](https://github.com/lincc-frameworks/python-project-template).
-
-A repository badge was added to show that this project uses the python-project-template, however it's up to
-you whether or not you'd like to display it!
 
 For more information about the project template see the 
 [documentation](https://lincc-ppt.readthedocs.io/en/latest/).
