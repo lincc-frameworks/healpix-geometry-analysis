@@ -12,7 +12,7 @@ class OptaxOptimizerProblem(BaseProblem):
 
     Parameters
     ----------
-    geometry : TileGeometry
+    geometry : BaseGeometry
         Tile geometry object
     """
 
@@ -48,4 +48,4 @@ class OptaxOptimizerProblem(BaseProblem):
 
     def loss(self, params):
         """Loss function to minimize with optax"""
-        return self.geometry.calc_distance(*(params[name] for name in self.geometry.parameter_names))
+        return self.geometry.calc_distance(params)
